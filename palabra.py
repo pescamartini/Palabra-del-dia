@@ -1,58 +1,39 @@
-import requests
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from pathlib import Path
 from datetime import date
-import re
 
-BASE_URL = "https://dle.rae.es/"
+URL = "https://dle.rae.es/"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page(
+        user_agent=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 Chrome/120 Safari/537.36"
+        )
+    )
 
-r = requests.get(BASE_URL, headers=headers, timeout=30)
-r.raise_for_status()
+    page.goto(URL, wait_until="networkidle")
 
-soup = BeautifulSoup(r.text, "html.parser")
+    html = page.content()
 
-# Cerca un link contenente "Palabra del día"
-link = None
-for a in soup.find_all("a", href=True):
-    text = a.get_text(" ", strip=True)
-    if "Palabra del día" in text:
-        link = a["href"]
-        break
+    browser.close()
 
-if link is None:
-    raise Exception("Palabra del día non trovata.")
+soup = BeautifulSoup(html, "html.parser")
 
-if not link.startswith("http"):
-    if not link.startswith("/"):
-        link = "/" + link
-    palabra_url = "https://dle.rae.es" + link
-else:
-    palabra_url = link
+# Cerca la sezione della parola del giorno
+testo = soup.get_text(" ", strip=True)
 
-r = requests.get(palabra_url, headers=headers, timeout=30)
-r.raise_for_status()
+parola = None
 
-soup = BeautifulSoup(r.text, "html.parser")
+if "Palabra del día" in testo:
+    parti = testo.split("Palabra del día")
+    if len(parti) > 1:
+        parola = parti[1].split()[0]
 
-# Titolo
-h1 = soup.find("h1")
-palabra = h1.get_text(strip=True) if h1 else "Sconosciuta"
-
-# Prima definizione disponibile
-definizione = ""
-
-for d in soup.find_all(["p", "div"]):
-    txt = d.get_text(" ", strip=True)
-    if re.match(r"^\d+\.", txt):
-        definizione = txt
-        break
-
-if not definizione:
-    definizione = "Definizione non trovata."
+if not parola:
+    raise Exception("Non trovata la Palabra del día")
 
 Path("palabras").mkdir(exist_ok=True)
 
@@ -62,18 +43,14 @@ contenuto = f"""# {oggi}
 
 ## Palabra
 
-{palabra}
-
-## Definición
-
-{definizione}
+{parola}
 
 ## Fuente
 
-{palabra_url}
+{URL}
 """
 
 with open(f"palabras/{oggi}.md", "w", encoding="utf-8") as f:
     f.write(contenuto)
 
-print("Creato:", f"palabras/{oggi}.md")
+print("Creato file:", oggi)
