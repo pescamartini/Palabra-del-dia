@@ -7,6 +7,7 @@ URL = "https://dle.rae.es/"
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
+
     page = browser.new_page(
         user_agent=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -22,18 +23,22 @@ with sync_playwright() as p:
 
 soup = BeautifulSoup(html, "html.parser")
 
-# Cerca la sezione della parola del giorno
-testo = soup.get_text(" ", strip=True)
+# Estrae la parola del giorno dalla classe ufficiale RAE
+elemento = soup.select_one(".c-word-day__word")
 
-parola = None
+if not elemento:
+    raise Exception("Palabra del día non trovata")
 
-if "Palabra del día" in testo:
-    parti = testo.split("Palabra del día")
-    if len(parti) > 1:
-        parola = parti[1].split()[0]
+palabra = elemento.get_text(strip=True)
 
-if not parola:
-    raise Exception("Non trovata la Palabra del día")
+# Recupera il link della voce
+link_element = soup.select_one(".c-word-day__link")
+
+if link_element and link_element.get("href"):
+    fuente = "https://dle.rae.es" + link_element["href"]
+else:
+    fuente = URL
+
 
 Path("palabras").mkdir(exist_ok=True)
 
@@ -43,14 +48,14 @@ contenuto = f"""# {oggi}
 
 ## Palabra
 
-{parola}
+{palabra}
 
 ## Fuente
 
-{URL}
+{fuente}
 """
 
 with open(f"palabras/{oggi}.md", "w", encoding="utf-8") as f:
     f.write(contenuto)
 
-print("Creato file:", oggi)
+print(f"Creato: palabras/{oggi}.md")
