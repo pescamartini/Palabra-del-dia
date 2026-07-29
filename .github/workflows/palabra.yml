@@ -1,0 +1,39 @@
+name: Palabra del día
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  palabra:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Imposta Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa librerie
+        run: pip install -r requirements.txt
+
+      - name: Esegui script
+        run: python palabra.py
+
+      - name: Salva il file Markdown
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add palabras/
+
+          git diff --cached --quiet || git commit -m "Palabra del día $(date +%F)"
+
+          git push
