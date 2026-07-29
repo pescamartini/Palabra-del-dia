@@ -21,10 +21,10 @@ jobs:
         with:
           python-version: "3.12"
 
-- name: Installa librerie
-  run: |
-    pip install -r requirements.txt
-    playwright install chromium
+      - name: Installa librerie
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
 
       - name: Esegui script
         run: python palabra.py
