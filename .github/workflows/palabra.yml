@@ -2,7 +2,7 @@ name: Palabra del día
 
 on:
   schedule:
-    - cron: "0 6 *25 * *"
+    - cron: "40 7 * * *"
   workflow_dispatch:
 
 permissions:
